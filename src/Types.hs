@@ -58,7 +58,7 @@ normalize v
     | otherwise = vmap (/ len v) v
 
 mkNormVect :: Point3D -> Point3D -> Vec3D
-mkNormVect u v = normalize $ v - u
+mkNormVect u v = normalize $ u - v
 
 dist :: Vec3D -> Vec3D -> Scalar
 dist u v = len $ u - v
@@ -69,10 +69,10 @@ clip = vmap (max 0.0 . min 1.0)
 solveQ :: Vec3D -> [Scalar]
 solveQ (Vec3D a b c)
     | d < 0 = []
-    | d > 0 = [(-b - sqrt d) / (2 * a), (-b + sqrt d) / (2 * a)]
-    | otherwise = [-b / (2 * a)]
+    | d > 0 = [(-b - sqrt d) / (2.0 * a), (-b + sqrt d) / (2.0 * a)]
+    | otherwise = [-b / (2.0 * a)]
   where
-    d = b * b - 4 * a * c
+    d = b * b - 4.0 * a * c
 
 mkRay :: Point3D -> Point3D -> Ray
 mkRay p1 p2 = Ray p1 (mkNormVect p1 p2)

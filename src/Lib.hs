@@ -4,7 +4,7 @@ module Lib
 
 import Types
 import Ppm
--- import Data.Maybe (isNothing, isJust, fromJust)
+import Data.Maybe (isNothing, isJust, fromJust)
 
 -- data Diffuse = Solid Color | Perlin (Point3D -> Color)
 -- data Texture = Texture Diffuse Double Int Double Double
@@ -13,7 +13,6 @@ import Ppm
 -- data Light = PointLight Point3D Intensity | AmbientLight Intensity
 -- data Camera = Camera Point3D Dimension
 -- data Scene = Scene Camera Color [TexturedObject] [Light]
--- data Intersection = Intersection Double Ray TexturedObject
 -- type Image = Point2D -> Color
 
 -- intDist :: Maybe Intersection -> Double
@@ -40,7 +39,7 @@ import Ppm
 -- closestInt :: Ray -> Maybe Intersection -> TexturedObject -> Maybe Intersection
 -- closestInt r i (o, m) =
 --   if d > epsilon && (isNothing i || d < intDist i)
---   then Just (Intersection d r (o, m))
+       --   then Just (Intersection d r (o, m))
 --   else i
 --   where
 --     d = fstPos (r `intersect` o)
@@ -104,20 +103,44 @@ import Ppm
 
 -- rayTrace :: Int -> Resolution -> Scene -> Image
 -- rayTrace d r s@(Scene (Camera _ dim) _ _ _) = rayTracePt d s . mapToWindow r dim
+-- intPoint (Just (Intersection d (Ray start dir) _)) = start + vmap (* d) dir
 
-fstPos :: [Scalar] -> Maybe Scalar
-fstPos [] = Nothing
-fstPos (x:xs) = if x > epsilon then Just x else fstPos xs
+data Intersection = Intersection Double Ray Object
 
-colorAtPoint :: Ray -> Color
-colorAtPoint r@(Ray _ dir) =
-  case intersects of
+intersectionPoint :: Ray -> Scalar -> Point3D
+intersectionPoint (Ray orig dir) t = orig + vmap (* t) dir
+
+sphereCenter :: Intersection -> Point3D
+sphereCenter (Intersection _ _ (Sphere _ center)) = center
+
+intDist :: Maybe Intersection -> Scalar
+intDist Nothing = 0.0
+intDist (Just (Intersection t _ _)) = t
+
+fstPos :: [Scalar] -> Scalar
+fstPos [] = 0.0
+fstPos (x:xs) = if x > epsilon then x else fstPos xs
+
+intersects :: Ray -> Maybe Intersection -> Object -> Maybe Intersection
+intersects ray int obj =
+  if t > epsilon && (isNothing int || t < intDist int)
+         then Just (Intersection t ray obj)
+  else int
+  where
+    t = fstPos $ ray `intersect` obj
+
+intersectObjects :: Ray -> [Object] -> Maybe Intersection
+intersectObjects ray = foldl (intersects ray) Nothing
+
+colorAtPoint :: Ray -> [Object] -> Color
+colorAtPoint r@(Ray _ dir) objs =
+  case intersection of
     Nothing -> vmap (* (1.0 - t)) (Vec3D 1.0 1.0 1.0) + vmap (* t) (Vec3D 0.5 0.7 1.0)
-    Just _  -> Vec3D 1.0 0.0 0.0
+    Just d  -> vmap (* 0.5) $ vmap (+ 1.0) (mkNormVect (intersectionPoint r t) (sphereCenter d))
   where
     (Vec3D _ y _) = normalize dir
     t             = 0.5 * (y + 1.0)
-    intersects    = fstPos (r `intersect` s)
+    intersection  = intersectObjects r objs
 
 width :: Int
 width = 200
@@ -125,17 +148,8 @@ width = 200
 height :: Int
 height = 100
 
--- size :: Int
--- size = 200 * 100
-
--- pixels :: [Color]
--- pixels = map ( (\v -> Vec3D v v v) . (\v -> v / fromIntegral size) . fromIntegral ) [0..size]
-
 camera :: Point3D
 camera = Vec3D 0.0 0.0 0.0
-
-s :: Object
-s = Sphere 0.5 (Vec3D 0.0 0.0 (-1.0))
 
 pixels :: [(Int, Int)]
 pixels = [(y, x) | y <- [0 .. height - 1], x <- [0 .. width - 1]]
@@ -149,13 +163,19 @@ horizontal = Vec3D 4.0 0.0 0.0
 vertical :: Vec3D
 vertical = Vec3D 0.0 2.0 0.0
 
-trace :: [Color]
-trace = map (\(vy, vx) -> colorAtPoint (Ray camera (getPoint vy vx))) pixels
+trace :: [(Int, Int)] -> [Object] -> [Color]
+trace pixels objs = map (\(vy, vx) -> colorAtPoint (ray vy vx) objs) pixels
   where
     horiz w = vmap (* (fromIntegral w / fromIntegral width)) horizontal
     verti h = vmap (* (fromIntegral h / fromIntegral height)) vertical
     pointAt (Vec3D xs ys zs) (Vec3D xh _ _) (Vec3D _ yw _) = Vec3D (xs + xh) (ys + yw) zs
     getPoint y' x' = pointAt start (horiz x') (verti y')
+    ray vy vx = Ray camera $ getPoint vy vx
+
+objs :: [Object]
+objs = [ Sphere 0.5 (Vec3D 0.0 0.0 (-1.0))
+       , Sphere 100 (Vec3D 0.0 (-100.5) (-1.0))
+       ]
 
 someFunc :: IO ()
-someFunc = writeFile "image.ppm" $ makePpm 200 100 trace
+someFunc = writeFile "image.ppm" . makePpm 200 100 $ trace pixels objs
