@@ -1,6 +1,6 @@
 module Ppm (makePpm) where
 
-import Types
+import Math
 import Data.List
 
 chunksOf :: Int -> [a] -> [[a]]

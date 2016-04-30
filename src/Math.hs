@@ -1,4 +1,4 @@
-module Types where
+module Math where
 
 type Scalar  = Double
 data Vec3D = Vec3D Scalar Scalar Scalar deriving (Eq)

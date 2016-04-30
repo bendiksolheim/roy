@@ -2,7 +2,7 @@ module Lib
     ( someFunc
     ) where
 
-import Types
+import Math
 import Ppm
 import Data.Maybe (isNothing, isJust, fromJust)
 
