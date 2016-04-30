@@ -4,7 +4,8 @@ module Lib
 
 import Math
 import Ppm
-import Data.Maybe (isNothing, isJust, fromJust)
+import Surface
+import Data.Maybe (isNothing)
 
 -- data Diffuse = Solid Color | Perlin (Point3D -> Color)
 -- data Texture = Texture Diffuse Double Int Double Double
@@ -105,13 +106,10 @@ import Data.Maybe (isNothing, isJust, fromJust)
 -- rayTrace d r s@(Scene (Camera _ dim) _ _ _) = rayTracePt d s . mapToWindow r dim
 -- intPoint (Just (Intersection d (Ray start dir) _)) = start + vmap (* d) dir
 
-data Intersection = Intersection Double Ray Object
+data Intersection = Intersection Double Ray ObjectW
 
 intersectionPoint :: Ray -> Scalar -> Point3D
 intersectionPoint (Ray orig dir) t = orig + vmap (* t) dir
-
-sphereCenter :: Intersection -> Point3D
-sphereCenter (Intersection _ _ (Sphere _ center)) = center
 
 intDist :: Maybe Intersection -> Scalar
 intDist Nothing = 0.0
@@ -121,22 +119,22 @@ fstPos :: [Scalar] -> Scalar
 fstPos [] = 0.0
 fstPos (x:xs) = if x > epsilon then x else fstPos xs
 
-intersects :: Ray -> Maybe Intersection -> Object -> Maybe Intersection
-intersects ray int obj =
+intersects :: Ray -> Maybe Intersection -> ObjectW -> Maybe Intersection
+intersects ray int o@(OW obj) =
   if t > epsilon && (isNothing int || t < intDist int)
-         then Just (Intersection t ray obj)
+         then Just (Intersection t ray o)
   else int
   where
-    t = fstPos $ ray `intersect` obj
+    t = fstPos $ intersect ray obj
 
-intersectObjects :: Ray -> [Object] -> Maybe Intersection
+intersectObjects :: Ray -> [ObjectW] -> Maybe Intersection
 intersectObjects ray = foldl (intersects ray) Nothing
 
-colorAtPoint :: Ray -> [Object] -> Color
+colorAtPoint :: Ray -> [ObjectW] -> Color
 colorAtPoint r@(Ray _ dir) objs =
   case intersection of
     Nothing -> vmap (* (1.0 - t)) (Vec3D 1.0 1.0 1.0) + vmap (* t) (Vec3D 0.5 0.7 1.0)
-    Just d  -> vmap (* 0.5) $ vmap (+ 1.0) (mkNormVect (intersectionPoint r t) (sphereCenter d))
+    Just (Intersection _ _ (OW d))  -> vmap (* 0.5) $ vmap (+ 1.0) (getNormal (intersectionPoint r t) d)
   where
     (Vec3D _ y _) = normalize dir
     t             = 0.5 * (y + 1.0)
@@ -163,7 +161,7 @@ horizontal = Vec3D 4.0 0.0 0.0
 vertical :: Vec3D
 vertical = Vec3D 0.0 2.0 0.0
 
-trace :: [(Int, Int)] -> [Object] -> [Color]
+trace :: [(Int, Int)] -> [ObjectW] -> [Color]
 trace pixels objs = map (\(vy, vx) -> colorAtPoint (ray vy vx) objs) pixels
   where
     horiz w = vmap (* (fromIntegral w / fromIntegral width)) horizontal
@@ -172,9 +170,9 @@ trace pixels objs = map (\(vy, vx) -> colorAtPoint (ray vy vx) objs) pixels
     getPoint y' x' = pointAt start (horiz x') (verti y')
     ray vy vx = Ray camera $ getPoint vy vx
 
-objs :: [Object]
-objs = [ Sphere 0.5 (Vec3D 0.0 0.0 (-1.0))
-       , Sphere 100 (Vec3D 0.0 (-100.5) (-1.0))
+objs :: [ObjectW]
+objs = [ OW $ Sphere (Vec3D 0.0 0.0 (-1.0)) 0.5
+       , OW $ Sphere (Vec3D 0.0 (-100.5) (-1.0)) 100
        ]
 
 someFunc :: IO ()

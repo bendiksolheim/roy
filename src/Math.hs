@@ -14,9 +14,6 @@ data Ray = Ray
            , direction :: Vec3D }
            deriving (Eq, Show)
 
-data Object = Sphere Scalar Point3D
-            | Plane (Scalar, Scalar, Scalar, Scalar)
-
 type Resolution = (Int, Int)
 type Dimension  = (Int, Int)
 
@@ -76,25 +73,6 @@ solveQ (Vec3D a b c)
 
 mkRay :: Point3D -> Point3D -> Ray
 mkRay p1 p2 = Ray p1 (mkNormVect p1 p2)
-
-intersect :: Ray -> Object -> [Scalar]
-intersect (Ray start dir) (Sphere rad center) = solveQ $ Vec3D a b c
-  where
-    a = dir <.> dir
-    d = start - center
-    b = 2 * (dir <.> d)
-    c = (d <.> d) - rad * rad
-
-intersect (Ray start dir) (Plane (a, b, c, d)) =
-    if abs part < epsilon
-    then []
-    else [- (d + (Vec3D a b c <.> start)) / part]
-  where
-    part = Vec3D a b c <.> dir
-
-normal :: Point3D -> Object -> Normal
-normal p (Sphere rad center) = normalize $ vmap (/ rad) $ p - center
-normal _ (Plane (a, b, c, _)) = normalize $ Vec3D a b c
 
 reflect :: Vec3D -> Vec3D -> Vec3D
 reflect i n = i - vmap (* (2 * (n <.> i))) n
