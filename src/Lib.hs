@@ -5,7 +5,11 @@ module Lib
 import Math
 import Ppm
 import Surface
+import Camera
+import Random
+
 import Data.Maybe (isNothing)
+import System.Random.Mersenne.Pure64
 
 -- data Diffuse = Solid Color | Perlin (Point3D -> Color)
 -- data Texture = Texture Diffuse Double Int Double Double
@@ -130,15 +134,15 @@ intersects ray int o@(OW obj) =
 intersectObjects :: Ray -> [ObjectW] -> Maybe Intersection
 intersectObjects ray = foldl (intersects ray) Nothing
 
-colorAtPoint :: Ray -> [ObjectW] -> Color
-colorAtPoint r@(Ray _ dir) objs =
+colorAtPoint :: [ObjectW] -> Ray -> Color
+colorAtPoint objects r@(Ray _ dir) =
   case intersection of
     Nothing -> vmap (* (1.0 - t)) (Vec3D 1.0 1.0 1.0) + vmap (* t) (Vec3D 0.5 0.7 1.0)
     Just (Intersection _ _ (OW d))  -> vmap (* 0.5) $ vmap (+ 1.0) (getNormal (intersectionPoint r t) d)
   where
     (Vec3D _ y _) = normalize dir
     t             = 0.5 * (y + 1.0)
-    intersection  = intersectObjects r objs
+    intersection  = intersectObjects r objects
 
 width :: Int
 width = 200
@@ -146,29 +150,16 @@ width = 200
 height :: Int
 height = 100
 
-camera :: Point3D
-camera = Vec3D 0.0 0.0 0.0
-
 pixels :: [(Int, Int)]
 pixels = [(y, x) | y <- [0 .. height - 1], x <- [0 .. width - 1]]
 
-start :: Vec3D
-start = Vec3D (-2.0) (-1.0) (-1.0)
-
-horizontal :: Vec3D
-horizontal = Vec3D 4.0 0.0 0.0
-
-vertical :: Vec3D
-vertical = Vec3D 0.0 2.0 0.0
-
-trace :: [(Int, Int)] -> [ObjectW] -> [Color]
-trace pixels objs = map (\(vy, vx) -> colorAtPoint (ray vy vx) objs) pixels
+trace :: [ObjectW] -> [(Int, Int)] -> Rand [Color]
+trace objects = mapM tracePixel
   where
-    horiz w = vmap (* (fromIntegral w / fromIntegral width)) horizontal
-    verti h = vmap (* (fromIntegral h / fromIntegral height)) vertical
-    pointAt (Vec3D xs ys zs) (Vec3D xh _ _) (Vec3D _ yw _) = Vec3D (xs + xh) (ys + yw) zs
-    getPoint y' x' = pointAt start (horiz x') (verti y')
-    ray vy vx = Ray camera $ getPoint vy vx
+    tracePixel (y, x) = do
+      rs <- getDoubles 100
+      return $ vmap (/ 100) . foldl (+) zeroVector . map (\(v, u) -> colorAtPoint objects . getRay $ transform (v + fromIntegral y, u + fromIntegral x)) $ rs
+    transform (y, x) = (y / fromIntegral height, x / fromIntegral width)
 
 objs :: [ObjectW]
 objs = [ OW $ Sphere (Vec3D 0.0 0.0 (-1.0)) 0.5
@@ -176,4 +167,7 @@ objs = [ OW $ Sphere (Vec3D 0.0 0.0 (-1.0)) 0.5
        ]
 
 someFunc :: IO ()
-someFunc = writeFile "image.ppm" . makePpm 200 100 $ trace pixels objs
+someFunc = do
+  rnd <- newPureMT
+  let res = evalRandom (trace objs pixels) rnd
+  writeFile "image.ppm" $ makePpm 200 100 res
