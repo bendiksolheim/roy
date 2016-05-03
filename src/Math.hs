@@ -88,11 +88,3 @@ refract i n r
     c = n <.> negate i
     r_c = if c < 0 then r else 1 / r
     v = 1 + (r_c * r_c) * (c * c - 1)
-
-mapToWindow :: Resolution -> Dimension -> Point2D -> Point3D
-mapToWindow (rx, ry) (w, h) (px, py) = Vec3D (x / rxD) (y /ryD) 0.0
-  where
-    (rxD, ryD) = (fromIntegral rx, fromIntegral ry)
-    (pxD, pyD) = (fromIntegral px, fromIntegral py)
-    (wD, hD)   = (fromIntegral w, fromIntegral h)
-    (x, y)     = ((pxD - rxD / 2) * wD, (pyD - ryD / 2) * hD)
