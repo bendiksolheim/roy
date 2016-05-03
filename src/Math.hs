@@ -38,6 +38,9 @@ instance Num Vec3D where
 vmap :: (Scalar -> Scalar) -> Vec3D -> Vec3D
 vmap f (Vec3D x y z) = Vec3D (f x) (f y) (f z)
 
+vmapM :: Monad m => (Scalar -> Scalar) -> Vec3D -> m Vec3D
+vmapM f (Vec3D x y z) = return $ Vec3D (f x) (f y) (f z)
+
 -- Dot product
 (<.>) :: Vec3D -> Vec3D -> Scalar
 (Vec3D x1 y1 z1) <.> (Vec3D x2 y2 z2) = x1 * x2 + y1 * y2 + z1 * z2
