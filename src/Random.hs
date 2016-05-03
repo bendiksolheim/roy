@@ -1,7 +1,6 @@
 module Random where
 
 import Control.Monad
-import System.Random
 import System.Random.Mersenne.Pure64
 
 data R a = R !a {-# UNPACK #-}!PureMT
