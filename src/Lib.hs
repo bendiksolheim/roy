@@ -2,113 +2,14 @@ module Lib
     ( someFunc
     ) where
 
-import Math
-import Ppm
-import Surface
-import Camera
-import Random
+import           Camera
+import           Math
+import           Ppm
+import           Random
+import           Surface
 
-import Data.Maybe (isNothing)
-import System.Random.Mersenne.Pure64
-
--- data Diffuse = Solid Color | Perlin (Point3D -> Color)
--- data Texture = Texture Diffuse Double Int Double Double
--- type TexturedObject = (Object, Texture)
--- type Intensity = Vec3D
--- data Light = PointLight Point3D Intensity | AmbientLight Intensity
--- data Camera = Camera Point3D Dimension
--- data Scene = Scene Camera Color [TexturedObject] [Light]
--- type Image = Point2D -> Color
-
--- intDist :: Maybe Intersection -> Double
--- intDist Nothing = 0.0
--- intDist ( Just (Intersection d _ _) ) = d
--- intText :: Maybe Intersection -> Texture
--- intText Nothing = Texture (Solid zeroVector) 0.0 0 0.0 0.0
--- intText (Just (Intersection _ _ (_, t))) = t
--- intPoint :: Maybe Intersection -> Point3D
--- intPoint Nothing = zeroVector
--- intPoint (Just (Intersection d (Ray start dir) _)) = start + vmap (* d) dir
--- colorAt :: Maybe Intersection -> Color
--- colorAt Nothing = Vec3D 0.0 0.0 0.0
--- colorAt (Just (Intersection _ _ (_, Texture (Solid color) _ _ _ _))) = color
--- colorAt i@(Just (Intersection _ _ (_, Texture (Perlin f) _ _ _ _))) = f (intPoint i)
--- normalAt :: Maybe Intersection -> Normal
--- normalAt Nothing = Vec3D 0.0 0.0 0.0
--- normalAt i@(Just (Intersection _ _ (o, _))) = normal (intPoint i) o
-
--- fstPos :: [Double] -> Double
--- fstPos [] = 0.0
--- fstPos (x:xs) = if x > epsilon then x else fstPos xs
-
--- closestInt :: Ray -> Maybe Intersection -> TexturedObject -> Maybe Intersection
--- closestInt r i (o, m) =
---   if d > epsilon && (isNothing i || d < intDist i)
-       --   then Just (Intersection d r (o, m))
---   else i
---   where
---     d = fstPos (r `intersect` o)
-
--- intersects :: Ray -> [TexturedObject] -> Maybe Intersection
--- intersects r = foldl (closestInt r) Nothing
-
--- diff :: Maybe Intersection -> Light -> Color
--- diff _ (AmbientLight _) = zeroVector
--- diff i (PointLight pos int) = vmap (* mkNormVect (intPoint i) pos <.> normalAt i) int * colorAt i
-
--- spec :: Maybe Intersection -> Vec3D -> Light -> Color
--- spec _ _ (AmbientLight _) = zeroVector
--- spec i d (PointLight pos int) = vmap (* (reflCoef * ( (normalAt i <.> h) ** fromIntegral specCoef))) int
---   where
---     h = normalize (negate d) + mkNormVect (intPoint i) pos
---     (Texture _ reflCoef specCoef _ _) = intText i
-
--- shadePt :: Intersection -> Vec3D -> [TexturedObject] -> Light -> Color
--- shadePt _ _ _ (AmbientLight int) = int
--- shadePt i d o l@(PointLight pos _)
---   | s = zeroVector
---   | otherwise = diff (Just i) l + spec (Just i) d l
---   where
---     s = isJust i_s && intDist i_s <= dist (intPoint (Just i)) pos
---     i_s = intersects (mkRay (intPoint (Just i)) pos) o
-
--- reflectPt :: Int -> Intersection -> Vec3D -> [TexturedObject] -> [Light] -> Color
--- reflectPt depth i d = colorAtPoint depth (Ray (intPoint (Just i)) (reflect d (normalAt (Just i)))) zeroVector
-
--- refractPt :: Int -> Intersection -> Vec3D -> Color -> [TexturedObject] -> [Light] -> Color
--- refractPt depth i d b =
---   if refractedDir == zeroVector
---   then (\x y -> zeroVector)
---   else colorAtPoint depth (Ray (intPoint (Just i)) refractedDir) (vmap (* refrCoef) b)
---   where
---     refractedDir = refract d (normalAt (Just i)) refrIndex
---     (Texture _ _ _ refrCoef refrIndex) = intText (Just i)
-
--- colorAtPoint :: Int -> Ray -> Color -> [TexturedObject] -> [Light] -> Color
--- colorAtPoint (-1) _ _ _ _ = zeroVector
--- colorAtPoint d r@(Ray _ dir) b o l =
---   if isNothing i
---   then b
---   else clip $ shadeColor + reflectColor + refractColor
---   where
---     shadeColor = foldl (+) zeroVector (map (shadePt (fromJust i) dir o) l)
---     reflectColor =
---       if reflCoef == 0.0
---       then zeroVector
---       else vmap (* reflCoef) (reflectPt (d - 1) (fromJust i) dir o l)
---     refractColor =
---       if refrCoef == 0.0
---       then zeroVector
---       else vmap (* refrCoef) (refractPt (d - 1) (fromJust i) dir b o l)
---     i = intersects r o
---     (Texture _ reflCoef _ refrCoef _) = intText i
-
--- rayTracePt :: Int -> Scene -> Point3D -> Color
--- rayTracePt d (Scene (Camera eye _) b o l) p = colorAtPoint d (Ray p (mkNormVect eye p)) b o l
-
--- rayTrace :: Int -> Resolution -> Scene -> Image
--- rayTrace d r s@(Scene (Camera _ dim) _ _ _) = rayTracePt d s . mapToWindow r dim
--- intPoint (Just (Intersection d (Ray start dir) _)) = start + vmap (* d) dir
+import           Data.Maybe                    (isNothing)
+import           System.Random.Mersenne.Pure64
 
 data Intersection = Intersection Double Ray ObjectW
 
@@ -126,7 +27,7 @@ fstPos (x:xs) = if x > epsilon then x else fstPos xs
 intersects :: Ray -> Maybe Intersection -> ObjectW -> Maybe Intersection
 intersects ray int o@(OW obj) =
   if t > epsilon && (isNothing int || t < intDist int)
-         then Just (Intersection t ray o)
+  then Just (Intersection t ray o)
   else int
   where
     t = fstPos $ intersect ray obj
@@ -134,11 +35,15 @@ intersects ray int o@(OW obj) =
 intersectObjects :: Ray -> [ObjectW] -> Maybe Intersection
 intersectObjects ray = foldl (intersects ray) Nothing
 
-colorAtPoint :: [ObjectW] -> Ray -> Color
+colorAtPoint :: [ObjectW] -> Ray -> Rand Color
 colorAtPoint objects r@(Ray _ dir) =
   case intersection of
-    Nothing -> vmap (* (1.0 - t)) (Vec3D 1.0 1.0 1.0) + vmap (* t) (Vec3D 0.5 0.7 1.0)
-    Just (Intersection _ _ (OW d))  -> vmap (* 0.5) $ vmap (+ 1.0) (getNormal (intersectionPoint r t) d)
+    Nothing -> return $ vmap (* (1.0 - t)) (Vec3D 1.0 1.0 1.0) + vmap (* t) (Vec3D 0.5 0.7 1.0)
+    Just (Intersection p ray (OW d)) -> do
+      randomVector <- randomInUnitSphere
+      let target = intersectionPoint ray p + getNormal (intersectionPoint ray p) d + randomVector
+      color <- colorAtPoint objects (Ray (intersectionPoint ray p) (target - intersectionPoint ray p))
+      vmapM (* 0.5) color
   where
     (Vec3D _ y _) = normalize dir
     t             = 0.5 * (y + 1.0)
@@ -153,13 +58,27 @@ height = 100
 pixels :: [(Int, Int)]
 pixels = [(y, x) | y <- [0 .. height - 1], x <- [0 .. width - 1]]
 
-trace :: [ObjectW] -> [(Int, Int)] -> Rand [Color]
-trace objects = mapM tracePixel
+randomInUnitSphere :: Rand Vec3D
+randomInUnitSphere = do
+    x <- getDouble
+    y <- getDouble
+    z <- getDouble
+    let p = vmap (* 2.0) (Vec3D x y z) - Vec3D 1.0 1.0 1.0
+    if p <.> p >= 10
+    then randomInUnitSphere
+    else return p
+
+tracePixel :: [ObjectW] -> (Int, Int) -> Rand Color
+tracePixel objects (y, x) = do
+  rs <- getDoubles 100
+  colors <- mapM getColor rs
+  vmapM (/ 100) . foldl (+) zeroVector $ colors
   where
-    tracePixel (y, x) = do
-      rs <- getDoubles 100
-      return $ vmap (/ 100) . foldl (+) zeroVector . map (\(v, u) -> colorAtPoint objects . getRay $ transform (v + fromIntegral y, u + fromIntegral x)) $ rs
-    transform (y, x) = (y / fromIntegral height, x / fromIntegral width)
+    getColor = colorAtPoint objects . getRay . transform
+    transform (v, u) = ((v + fromIntegral y) / fromIntegral height, (u + fromIntegral x) / fromIntegral width)
+
+trace :: [ObjectW] -> [(Int, Int)] -> Rand [Color]
+trace = mapM . tracePixel
 
 objs :: [ObjectW]
 objs = [ OW $ Sphere (Vec3D 0.0 0.0 (-1.0)) 0.5
