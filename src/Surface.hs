@@ -10,7 +10,7 @@ class Object o where
   -- compute unit normal at point
   getNormal :: Point3D -> o -> Vec3D
 
-data ObjectW = forall o. Object o => OW o
+data AnyObject = forall o. Object o => AnyObject o
 
 data Sphere = Sphere
               { center :: Point3D

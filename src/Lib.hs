@@ -11,7 +11,7 @@ import           Surface
 import           Data.Maybe                    (isNothing)
 import           System.Random.Mersenne.Pure64
 
-data Intersection = Intersection Double Ray ObjectW
+data Intersection = Intersection Double Ray AnyObject
 
 intersectionPoint :: Ray -> Scalar -> Point3D
 intersectionPoint (Ray orig dir) t = orig + vmap (* t) dir
@@ -24,22 +24,22 @@ fstPos :: [Scalar] -> Scalar
 fstPos [] = 0.0
 fstPos (x:xs) = if x > epsilon then x else fstPos xs
 
-intersects :: Ray -> Maybe Intersection -> ObjectW -> Maybe Intersection
-intersects ray int o@(OW obj) =
+intersects :: Ray -> Maybe Intersection -> AnyObject -> Maybe Intersection
+intersects ray int o@(AnyObject obj) =
   if t > epsilon && (isNothing int || t < intDist int)
   then Just (Intersection t ray o)
   else int
   where
     t = fstPos $ intersect ray obj
 
-intersectObjects :: Ray -> [ObjectW] -> Maybe Intersection
+intersectObjects :: Ray -> [AnyObject] -> Maybe Intersection
 intersectObjects ray = foldl (intersects ray) Nothing
 
-colorAtPoint :: [ObjectW] -> Ray -> Rand Color
+colorAtPoint :: [AnyObject] -> Ray -> Rand Color
 colorAtPoint objects r@(Ray _ dir) =
   case intersection of
     Nothing -> return $ vmap (* (1.0 - t)) (Vec3D 1.0 1.0 1.0) + vmap (* t) (Vec3D 0.5 0.7 1.0)
-    Just (Intersection p ray (OW d)) -> do
+    Just (Intersection p ray (AnyObject d)) -> do
       randomVector <- randomInUnitSphere
       let target = intersectionPoint ray p + getNormal (intersectionPoint ray p) d + randomVector
       color <- colorAtPoint objects (Ray (intersectionPoint ray p) (target - intersectionPoint ray p))
@@ -68,7 +68,7 @@ randomInUnitSphere = do
     then randomInUnitSphere
     else return p
 
-tracePixel :: [ObjectW] -> (Int, Int) -> Rand Color
+tracePixel :: [AnyObject] -> (Int, Int) -> Rand Color
 tracePixel objects (y, x) = do
   rs <- getDoubles 100
   colors <- mapM getColor rs
@@ -77,12 +77,12 @@ tracePixel objects (y, x) = do
     getColor = colorAtPoint objects . getRay . transform
     transform (v, u) = ((v + fromIntegral y) / fromIntegral height, (u + fromIntegral x) / fromIntegral width)
 
-trace :: [ObjectW] -> [(Int, Int)] -> Rand [Color]
+trace :: [AnyObject] -> [(Int, Int)] -> Rand [Color]
 trace = mapM . tracePixel
 
-objs :: [ObjectW]
-objs = [ OW $ Sphere (Vec3D 0.0 0.0 (-1.0)) 0.5
-       , OW $ Sphere (Vec3D 0.0 (-100.5) (-1.0)) 100
+objs :: [AnyObject]
+objs = [ AnyObject $ Sphere (Vec3D 0.0 0.0 (-1.0)) 0.5
+       , AnyObject $ Sphere (Vec3D 0.0 (-100.5) (-1.0)) 100
        ]
 
 someFunc :: IO ()
