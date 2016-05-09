@@ -8,41 +8,28 @@ import           Ppm
 import           Random
 import           Surface
 
-import           Data.Maybe                    (isNothing)
+import           Data.List                     (foldl')
 import           System.Random.Mersenne.Pure64
 
-data Intersection = Intersection Double Ray AnyObject
-
-intersectionPoint :: Ray -> Scalar -> Point3D
-intersectionPoint (Ray orig dir) t = orig + vmap (* t) dir
-
-intDist :: Maybe Intersection -> Scalar
-intDist Nothing = 0.0
-intDist (Just (Intersection t _ _)) = t
-
-fstPos :: [Scalar] -> Scalar
-fstPos [] = 0.0
-fstPos (x:xs) = if x > epsilon then x else fstPos xs
-
-intersects :: Ray -> Maybe Intersection -> AnyObject -> Maybe Intersection
-intersects ray int o@(AnyObject obj) =
-  if t > epsilon && (isNothing int || t < intDist int)
-  then Just (Intersection t ray o)
-  else int
-  where
-    t = fstPos $ intersect ray obj
+minMaybe :: Ord a => Maybe a -> Maybe a -> Maybe a
+minMaybe Nothing Nothing = Nothing
+minMaybe Nothing a = a
+minMaybe a Nothing = a
+minMaybe (Just a) (Just b) = Just $ min a b
 
 intersectObjects :: Ray -> [AnyObject] -> Maybe Intersection
-intersectObjects ray = foldl (intersects ray) Nothing
+intersectObjects ray = foldl' reduce Nothing
+  where
+    reduce int obj = minMaybe (intersects ray obj) int
 
 colorAtPoint :: [AnyObject] -> Ray -> Rand Color
 colorAtPoint objects r@(Ray _ dir) =
   case intersection of
     Nothing -> return $ vmap (* (1.0 - t)) (Vec3D 1.0 1.0 1.0) + vmap (* t) (Vec3D 0.5 0.7 1.0)
-    Just (Intersection p ray (AnyObject d)) -> do
+    Just int -> do
       randomVector <- randomInUnitSphere
-      let target = intersectionPoint ray p + getNormal (intersectionPoint ray p) d + randomVector
-      color <- colorAtPoint objects (Ray (intersectionPoint ray p) (target - intersectionPoint ray p))
+      let target = intPoint int + intGetNormal (intPoint int) int + randomVector
+      color <- colorAtPoint objects (Ray (intPoint int) (target - intPoint int))
       vmapM (* 0.5) color
   where
     (Vec3D _ y _) = normalize dir
