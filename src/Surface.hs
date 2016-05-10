@@ -30,18 +30,17 @@ instance Object Sphere where
 data Intersection = Intersection
                     { intT :: Double
                     , intPoint :: Point3D
-                    , intRay :: Ray
                     , intAnyObject :: AnyObject
                     }
 
 instance Eq Intersection where
-  (Intersection t1 _ _ _) == (Intersection t2 _ _ _) = t1 == t2
+  (Intersection t1 _ _) == (Intersection t2  _ _) = t1 == t2
 
 instance Ord Intersection where
-  compare (Intersection t1 _ _ _) (Intersection t2 _ _ _) = compare t1 t2
+  compare (Intersection t1 _ _) (Intersection t2 _ _) = compare t1 t2
 
 intGetNormal :: Point3D -> Intersection -> Vec3D
-intGetNormal p (Intersection _ _ _ (AnyObject o)) = getNormal p o
+intGetNormal p (Intersection _ _ (AnyObject o)) = getNormal p o
 
 intersectionPoint :: Ray -> Scalar -> Point3D
 intersectionPoint (Ray orig dir) t = orig + vmap (* t) dir
@@ -53,7 +52,7 @@ fstPos (x:xs) = if x > epsilon then x else fstPos xs
 intersects :: Ray -> AnyObject -> Maybe Intersection
 intersects ray obj@(AnyObject object) =
   if t > epsilon
-  then Just (Intersection t (intersectionPoint ray t) ray obj)
+  then Just (Intersection t (intersectionPoint ray t) obj)
   else Nothing
   where
     t = fstPos $ intersect ray object
