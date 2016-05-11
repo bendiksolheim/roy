@@ -21,6 +21,7 @@ library
                      , Surface
                      , Camera
                      , Random
+                     , Material
   build-depends:       base >= 4.7 && < 5
                      , mersenne-random-pure64 >= 0.2
                      , random
