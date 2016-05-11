@@ -45,16 +45,6 @@ height = 100
 pixels :: [(Int, Int)]
 pixels = [(y, x) | y <- [0 .. height - 1], x <- [0 .. width - 1]]
 
-randomInUnitSphere :: Rand Vec3D
-randomInUnitSphere = do
-    x <- getDouble
-    y <- getDouble
-    z <- getDouble
-    let p = vmap (* 2.0) (Vec3D x y z) - Vec3D 1.0 1.0 1.0
-    if p <.> p >= 10
-    then randomInUnitSphere
-    else return p
-
 tracePixel :: [AnyObject] -> (Int, Int) -> Rand Color
 tracePixel objects (y, x) = do
   rs <- getDoubles 100
