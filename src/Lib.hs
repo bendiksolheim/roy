@@ -7,6 +7,7 @@ import           Math
 import           Ppm
 import           Random
 import           Surface
+import           Material
 
 import           Data.List                     (foldl')
 import           System.Random.Mersenne.Pure64
@@ -22,15 +23,20 @@ intersectObjects ray = foldl' reduce Nothing
   where
     reduce int obj = minMaybe (intersects ray obj) int
 
-colorAtPoint :: [AnyObject] -> Ray -> Rand Color
-colorAtPoint objects r@(Ray _ dir) =
+colorAtPoint :: [AnyObject] -> Int -> Ray -> Rand Color
+colorAtPoint objects depth r@(Ray _ dir) =
   case intersection of
     Nothing -> return $ vmap (* (1.0 - t)) (Vec3D 1.0 1.0 1.0) + vmap (* t) (Vec3D 0.5 0.7 1.0)
-    Just int -> do
-      randomVector <- randomInUnitSphere
-      let target = intPoint int + intGetNormal (intPoint int) int + randomVector
-      color <- colorAtPoint objects (Ray (intPoint int) (target - intPoint int))
-      vmapM (* 0.5) color
+    Just int ->
+      if depth >= 50
+      then return zeroVector
+      else do
+        s <- scatter r int (Lamberian $ Vec3D 0.8 0.0 0.0)
+        case s of
+          Nothing -> return zeroVector
+          Just (Scattered scattered attenuation) -> do
+            tmp <- colorAtPoint objects (depth + 1) scattered
+            return $ tmp * attenuation
   where
     (Vec3D _ y _) = normalize dir
     t             = 0.5 * (y + 1.0)
@@ -51,7 +57,7 @@ tracePixel objects (y, x) = do
   colors <- mapM getColor rs
   vmapM (/ 100) . foldl (+) zeroVector $ colors
   where
-    getColor = colorAtPoint objects . getRay . transform
+    getColor = colorAtPoint objects 0 . getRay . transform
     transform (v, u) = ((v + fromIntegral y) / fromIntegral height, (u + fromIntegral x) / fromIntegral width)
 
 trace :: [AnyObject] -> [(Int, Int)] -> Rand [Color]
