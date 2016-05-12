@@ -7,4 +7,4 @@ The code mostly follows the book [Ray Tracing in One Weekend](https://www.amazon
 
 ## Current progress
 
-(render.png)
+![Latest render](render.png)
