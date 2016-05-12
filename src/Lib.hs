@@ -8,6 +8,8 @@ import           Ppm
 import           Random
 import           Surface
 import           Material
+import           Intersection
+import           Entity
 
 import           Data.List                     (foldl')
 import           System.Random.Mersenne.Pure64
@@ -18,12 +20,20 @@ minMaybe Nothing a = a
 minMaybe a Nothing = a
 minMaybe (Just a) (Just b) = Just $ min a b
 
-intersectObjects :: Ray -> [AnyObject] -> Maybe Intersection
+intersectObjects :: Ray -> [Entity] -> Maybe Intersection
 intersectObjects ray = foldl' reduce Nothing
   where
     reduce int obj = minMaybe (intersects ray obj) int
 
-colorAtPoint :: [AnyObject] -> Int -> Ray -> Rand Color
+scatter :: Ray -> Intersection -> Material -> Rand (Maybe Scattered)
+scatter _ int (Lambertian albedo) = do
+  randomVector <- randomInUnitSphere
+  let target = intPoint int + intGetNormal (intPoint int) int + randomVector
+  let s = Ray (intPoint int) (target - intPoint int)
+  return $ Just (Scattered s albedo)
+
+
+colorAtPoint :: [Entity] -> Int -> Ray -> Rand Color
 colorAtPoint objects depth r@(Ray _ dir) =
   case intersection of
     Nothing -> return $ vmap (* (1.0 - t)) (Vec3D 1.0 1.0 1.0) + vmap (* t) (Vec3D 0.5 0.7 1.0)
@@ -31,7 +41,7 @@ colorAtPoint objects depth r@(Ray _ dir) =
       if depth >= 50
       then return zeroVector
       else do
-        s <- scatter r int (Lamberian $ Vec3D 0.8 0.0 0.0)
+        s <- scatter r int (entityMaterial (intEntity int))
         case s of
           Nothing -> return zeroVector
           Just (Scattered scattered attenuation) -> do
@@ -51,7 +61,7 @@ height = 100
 pixels :: [(Int, Int)]
 pixels = [(y, x) | y <- [0 .. height - 1], x <- [0 .. width - 1]]
 
-tracePixel :: [AnyObject] -> (Int, Int) -> Rand Color
+tracePixel :: [Entity] -> (Int, Int) -> Rand Color
 tracePixel objects (y, x) = do
   rs <- getDoubles 100
   colors <- mapM getColor rs
@@ -60,12 +70,12 @@ tracePixel objects (y, x) = do
     getColor = colorAtPoint objects 0 . getRay . transform
     transform (v, u) = ((v + fromIntegral y) / fromIntegral height, (u + fromIntegral x) / fromIntegral width)
 
-trace :: [AnyObject] -> [(Int, Int)] -> Rand [Color]
+trace :: [Entity] -> [(Int, Int)] -> Rand [Color]
 trace = mapM . tracePixel
 
-objs :: [AnyObject]
-objs = [ AnyObject $ Sphere (Vec3D 0.0 0.0 (-1.0)) 0.5
-       , AnyObject $ Sphere (Vec3D 0.0 (-100.5) (-1.0)) 100
+objs :: [Entity]
+objs = [ Entity (AnyObject (Sphere (Vec3D 0.0 0.0 (-1.0)) 0.5)) (Lambertian (Vec3D 0.8 0.1 0.1))
+       , Entity (AnyObject (Sphere (Vec3D 0.0 (-100.5) (-1.0)) 100)) (Lambertian (Vec3D 0.1 0.8 0.1))
        ]
 
 someFunc :: IO ()
