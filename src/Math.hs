@@ -79,8 +79,8 @@ solveQ (Vec3D a b c)
 mkRay :: Point3D -> Point3D -> Ray
 mkRay p1 p2 = Ray p1 (mkNormVect p1 p2)
 
-reflect :: Vec3D -> Vec3D -> Vec3D
-reflect i n = i - vmap (* (2 * (n <.> i))) n
+-- reflect :: Vec3D -> Vec3D -> Vec3D
+-- reflect i n = i - vmap (* (2 * (n <.> i))) n
 
 refract :: Vec3D -> Vec3D -> Scalar -> Vec3D
 refract i n r
@@ -90,6 +90,11 @@ refract i n r
     c = n <.> negate i
     r_c = if c < 0 then r else 1 / r
     v = 1 + (r_c * r_c) * (c * c - 1)
+
+reflect :: Vec3D -> Vec3D -> Vec3D
+reflect v n = v - vmap (* (2 * dot)) n
+  where
+    dot = v <.> n
 
 randomInUnitSphere :: Rand Vec3D
 randomInUnitSphere = do
