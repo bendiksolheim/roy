@@ -32,9 +32,10 @@ scatter _ int (Lambertian albedo) = do
   let s = Ray (intPoint int) (target - intPoint int)
   return $ Just (Scattered s albedo)
 
-scatter (Ray _ dir) int (Metal albedo) = do
+scatter (Ray _ dir) int (Metal albedo fuzz) = do
   let reflected = reflect (normalize dir) (intGetNormal (intPoint int) int)
-  let s@(Ray _ sDir) = Ray (intPoint int) reflected
+  r <- randomInUnitSphere
+  let s@(Ray _ sDir) = Ray (intPoint int) (reflected + vmap (* fuzz) r )
   let scattered = Scattered s albedo
   if sDir <.> intGetNormal (intPoint int) int > 0
   then return (Just scattered)
@@ -84,8 +85,8 @@ trace = mapM . tracePixel
 objs :: [Entity]
 objs = [ Entity (AnyObject (Sphere (Vec3D 0.0 0.0 (-1.0)) 0.5)) (Lambertian (Vec3D 0.8 0.3 0.3))
        , Entity (AnyObject (Sphere (Vec3D 0.0 (-100.5) (-1.0)) 100)) (Lambertian (Vec3D 0.8 0.8 0.0))
-       , Entity (AnyObject (Sphere (Vec3D 1.0 0.0 (-1.0)) 0.5)) (Metal (Vec3D 0.8 0.6 0.2))
-       , Entity (AnyObject (Sphere (Vec3D (-1.0) 0.0 (-1.0)) 0.5)) (Metal (Vec3D 0.8 0.8 0.8))
+       , Entity (AnyObject (Sphere (Vec3D 1.0 0.0 (-1.0)) 0.5)) (Metal (Vec3D 0.8 0.6 0.2) 1.0)
+       , Entity (AnyObject (Sphere (Vec3D (-1.0) 0.0 (-1.0)) 0.5)) (Metal (Vec3D 0.8 0.8 0.8) 0.3)
        ]
 
 someFunc :: IO ()
