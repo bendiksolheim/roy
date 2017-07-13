@@ -57,14 +57,6 @@ scatter (Ray _ dir) int@(Intersection _ p _) (Dielectric ri) = do
   if prob < reflectProb
   then return . Just $ Scattered (Ray p reflected) att
   else return . Just $ Scattered (Ray p (fromJust ref)) att
--- case refract dir outwardNormal ni_over_nt of
-  --   Just a -> do
-  --     prob <- getDouble
-  --     let schl = schlick cosine ri
-  --     if prob < schl
-  --     then return . trace "1" $ Just (Scattered (Ray p a) attenuation)
-  --     else return . trace "2" $ Just (Scattered (Ray p reflected) attenuation)
-    -- Nothing -> return $ Just (Scattered (Ray p reflected) attenuation)
   where
     getOutwardNormal predicate norm = if predicate then negate norm else norm
     getNi_over_nt predicate = if predicate then ri else 1.0 / ri
@@ -75,10 +67,6 @@ scatter (Ray _ dir) int@(Intersection _ p _) (Dielectric ri) = do
     getReflectProb (Just _) cosine = schlick cosine ri
     getReflectProb Nothing  _ = 1.0
 
-
--- NOTE: Får en evig rekursjon i en Dielectric. Havner inne i Just (Scattered .. ).. hver gang
--- helt til depth er større enn 50. "intersection" burde bli Nothing før depth blir 50, men
--- det ser ikke ut til å skje. Feil med måten man intersecter på?
 colorAtPoint :: [Entity] -> Int -> Ray -> Rand Color
 colorAtPoint objects depth r@(Ray _ dir) =
   case intersection of

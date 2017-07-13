@@ -79,15 +79,6 @@ solveQ (Vec3D a b c)
 mkRay :: Point3D -> Point3D -> Ray
 mkRay p1 p2 = Ray p1 (mkNormVect p1 p2)
 
--- refract :: Vec3D -> Vec3D -> Scalar -> Maybe Vec3D
--- refract i n r
---     | v < 0 = Nothing
---     | otherwise = Just $ normalize $ vmap (* r_c) i + vmap (* (r_c * abs c - sqrt v)) n
---   where
---     c = n <.> negate i
---     r_c = if c < 0 then r else 1 / r
---     v = 1 + (r_c * r_c) * (c * c - 1)
-
 reflect :: Vec3D -> Vec3D -> Vec3D
 reflect v n = v - vmap (* (2 * (v <.> n))) n
 
