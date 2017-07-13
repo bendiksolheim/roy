@@ -41,7 +41,7 @@ vmap :: (Scalar -> Scalar) -> Vec3D -> Vec3D
 vmap f (Vec3D x y z) = Vec3D (f x) (f y) (f z)
 
 vmapM :: Monad m => (Scalar -> Scalar) -> Vec3D -> m Vec3D
-vmapM f (Vec3D x y z) = return $ Vec3D (f x) (f y) (f z)
+vmapM f v = return $ vmap f v
 
 -- Dot product
 (<.>) :: Vec3D -> Vec3D -> Scalar
@@ -79,22 +79,33 @@ solveQ (Vec3D a b c)
 mkRay :: Point3D -> Point3D -> Ray
 mkRay p1 p2 = Ray p1 (mkNormVect p1 p2)
 
--- reflect :: Vec3D -> Vec3D -> Vec3D
--- reflect i n = i - vmap (* (2 * (n <.> i))) n
-
-refract :: Vec3D -> Vec3D -> Scalar -> Vec3D
-refract i n r
-    | v < 0 = zeroVector
-    | otherwise = normalize $ vmap (* r_c) i + vmap (* (r_c * abs c - sqrt v)) n
-  where
-    c = n <.> negate i
-    r_c = if c < 0 then r else 1 / r
-    v = 1 + (r_c * r_c) * (c * c - 1)
+-- refract :: Vec3D -> Vec3D -> Scalar -> Maybe Vec3D
+-- refract i n r
+--     | v < 0 = Nothing
+--     | otherwise = Just $ normalize $ vmap (* r_c) i + vmap (* (r_c * abs c - sqrt v)) n
+--   where
+--     c = n <.> negate i
+--     r_c = if c < 0 then r else 1 / r
+--     v = 1 + (r_c * r_c) * (c * c - 1)
 
 reflect :: Vec3D -> Vec3D -> Vec3D
-reflect v n = v - vmap (* (2 * dot)) n
+reflect v n = v - vmap (* (2 * (v <.> n))) n
+
+refract :: Vec3D -> Vec3D -> Scalar -> Maybe Vec3D
+refract v n r =
+  if discriminant > 0.0
+  then Just $ vmap (* r) (uv - vmap (* dt) n) - vmap (* sqrt discriminant) n
+  else Nothing
   where
-    dot = v <.> n
+    uv = normalize v
+    dt = uv <.> n
+    discriminant = 1.0 - r * r * (1.0 - dt * dt)
+
+schlick :: Double -> Double -> Double
+schlick cosine idx = r0 + (1.0 - r0) * ((1.0 - cosine) ** 5)
+  where
+    r = (1.0 - idx) / (1.0 + idx)
+    r0 = r * r
 
 randomInUnitSphere :: Rand Vec3D
 randomInUnitSphere = do
