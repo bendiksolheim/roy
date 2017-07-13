@@ -108,12 +108,10 @@ tracePixels :: [Entity] -> [(Int, Int)] -> Rand [Color]
 tracePixels = mapM . tracePixel
 
 objs :: [Entity]
-objs = [ Entity (AnyObject (Sphere (Vec3D 0.0 0.0 (-1.0)) 0.5)) (Dielectric 1.5)
-       -- , Entity (AnyObject (Sphere (Vec3D 0.0 0.0 (-1.0)) 0.5)) (Lambertian (Vec3D 0.1 0.2 0.5))
+objs = [ Entity (AnyObject (Sphere (Vec3D 0.0 0.0 (-1.0)) 0.5)) (Lambertian (Vec3D 0.1 0.2 0.5))
        , Entity (AnyObject (Sphere (Vec3D 0.0 (-100.5) (-1.0)) 100)) (Lambertian (Vec3D 0.8 0.8 0.0))
-       , Entity (AnyObject (Sphere (Vec3D 1.0 0.0 (-1.0)) 0.5)) (Metal (Vec3D 0.8 0.6 0.2) 0.3)
+       , Entity (AnyObject (Sphere (Vec3D 1.0 0.0 (-1.0)) 0.5)) (Metal (Vec3D 0.8 0.6 0.2) 0.1)
        , Entity (AnyObject (Sphere (Vec3D (-1.0) 0.0 (-1.0)) 0.5)) (Dielectric 1.5)
-       -- , Entity (AnyObject (Sphere (Vec3D (-1.0) 0.0 (-1.0)) (-0.45))) (Dielectric 1.5)
        ]
 
 someFunc :: IO ()
