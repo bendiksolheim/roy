@@ -2,7 +2,7 @@ module Lib
     ( someFunc
     ) where
 
-import           Camera
+import           Camera ( Camera, mkCamera, getRay )
 import           Math
 import           Ppm
 import           Random
@@ -95,19 +95,25 @@ height = 100
 pixels :: [(Int, Int)]
 pixels = [(y, x) | y <- [0 .. height - 1], x <- [0 .. width - 1]]
 
-tracePixel :: [Entity] -> (Int, Int) -> Rand Color
-tracePixel objects (y, x) = do
+tracePixel :: Camera -> [Entity] -> (Int, Int) -> Rand Color
+tracePixel camera objects (y, x) = do
   rs <- getDoubles 100
   colors <- mapM getColor rs
   vmapM (/ 100) . foldl (+) zeroVector $ colors
   where
-    getColor = colorAtPoint objects 0 . getRay . transform
+    getColor = colorAtPoint objects 0 . getRay camera . transform
     transform (v, u) = ((v + fromIntegral y) / fromIntegral height, (u + fromIntegral x) / fromIntegral width)
 
-tracePixels :: [Entity] -> [(Int, Int)] -> Rand [Color]
-tracePixels = mapM . tracePixel
+tracePixels :: Camera -> [Entity] -> [(Int, Int)] -> Rand [Color]
+tracePixels camera = mapM . tracePixel camera
+
+r :: Double
+r = cos $ pi / 4
 
 objs :: [Entity]
+-- objs = [ Entity (AnyObject (Sphere (Vec3D (-r) 0.0 (-1.0)) r)) (Lambertian (Vec3D 0.0 0.0 1.0))
+--        , Entity (AnyObject (Sphere (Vec3D r 0.0 (-1.0)) r)) (Lambertian (Vec3D 1.0 0.0 0.0))
+--        ]
 objs = [ Entity (AnyObject (Sphere (Vec3D 0.0 0.0 (-1.0)) 0.5)) (Lambertian (Vec3D 0.1 0.2 0.5))
        , Entity (AnyObject (Sphere (Vec3D 0.0 (-100.5) (-1.0)) 100)) (Lambertian (Vec3D 0.8 0.8 0.0))
        , Entity (AnyObject (Sphere (Vec3D 1.0 0.0 (-1.0)) 0.5)) (Metal (Vec3D 0.8 0.6 0.2) 0.1)
@@ -117,5 +123,10 @@ objs = [ Entity (AnyObject (Sphere (Vec3D 0.0 0.0 (-1.0)) 0.5)) (Lambertian (Vec
 someFunc :: IO ()
 someFunc = do
   rnd <- newPureMT
-  let res = evalRandom (tracePixels objs pixels) rnd
+  let lookfrom = Vec3D (-2.0) 2.0 1.0
+  let lookat = Vec3D 0.0 0.0 (-1.0)
+  let viewUp = Vec3D 0.0 1.0 0.0
+  let camera = mkCamera lookfrom lookat viewUp 30 (fromIntegral width / fromIntegral height)
+  putStr $ show camera
+  let res = evalRandom (tracePixels camera objs pixels) rnd
   writeFile "image.ppm" $ makePpm width height res
